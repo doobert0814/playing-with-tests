@@ -1,5 +1,7 @@
 // http://localhost:3000/instruments
 
+document.addEventListener('DOMContentLoaded', getFromLocalStorage);
+
 const BASE_URL = "http://localhost:3000"
 const INSTRUMENT_URL = `${BASE_URL}/instruments`
 const LINE_ITEMS = `${BASE_URL}/line_items`
@@ -11,8 +13,6 @@ const clearCartBtn = document.getElementById('clear-cart')
 const cart = document.getElementById('img-cart')
 const addPhoto = document.getElementById('img-photo')
 const cartWindow = document.getElementById('shopping-cart')
-
-document.addEventListener('DOMContentLoaded', getFromLocalStorage);
 
 const contentContainer = document.getElementById('content')
 const productContainer = document.getElementById('products')
@@ -45,8 +45,82 @@ function getGuitars(url){
     .then(instruments => instruments.forEach(instrument => buildGuitar(instrument)))
 }
 
+const buildCreateForm = () => {
+    addPhotoToSell()
+    let form1 = document.querySelector('form')
+    form1.addEventListener('submit', (e) => handleSubmit(e, 'create'))
+}
+
+function handleSubmit(e, value){
+    debugger
+    e.preventDefault()
+    let guitar = {
+        title: e.target.Title.value,
+        brand: e.target.Brand.value,
+        description: e.target.Description.value,
+        condition: e.target.Condition.value,
+        finish: e.target.Finish.value,
+        price: e.target.Price.value,
+        image: e.target.Image.value
+    }
+    if(value != 'create'){
+        makePatch(guitar, value.id)
+    } else {
+        makePost(guitar)
+    }
+}
+
+function makePost(instrument){
+    debugger
+    fetch(INSTRUMENT_URL,{
+        method: 'POST',
+        headers: {
+            'Content-Type':'application/json'
+        },
+        // body: JSON.stringify(instrument)
+        body: JSON.stringify({
+            title: instrument.Title,
+            brand: instrument.Brand,
+            description: instrument.Description,
+            condition: instrument.Condition,
+            finish: instrument.Finish,
+            price: parseInt(instrument.price),
+            image: instrument.Image
+        })
+    })
+    .then(res => res.json())
+    .then(instrument => {
+        console.log(instrument)
+       getGuitars(url)
+    })
+    .catch(error => {
+        console.error('Errors: ', error)
+    })
+}
+
+function makePatch(instrument, e){
+    debugger
+
+    fetch(`${INSTRUMENT_URL}/${parseInt(e.target.dataset.id)}`, {
+        method:'PATCH',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(instrument)
+    })
+    .then(res => res.json())
+    .then(guitar => {
+        sellPage()
+    .then(() => {
+        buildGuitar(instrument)
+    }) 
+    })
+    .catch(error => {
+        console.error('Errors: ', error)
+    })
+}
+
 function buildGuitar(instrument){
-    // debugger
     let productImageContainer = document.createElement('div')
     productImageContainer.className = 'product-image'
     let image = document.createElement('img')
@@ -55,19 +129,19 @@ function buildGuitar(instrument){
     productDescription.className = 'product-description'
     productDescription.id = `instrument-${instrument.id}`
     productDescription.textContent = instrument.name
-    let productName = document.createElement('h3')//.textContent = instruments.description
+    let productName = document.createElement('h3')
     productName.className = 'product-name'
     productName.textContent = instrument.description
-    let productModel = document.createElement('h3')//.textContent = instrument.model
+    let productModel = document.createElement('h3')
     productModel.className = 'product-model'
     productModel.textContent = instrument.model
-    let productBrand = document.createElement('h3')//.textContent = instrument.brand
+    let productBrand = document.createElement('h3')
     productBrand.className = 'product-brand'
     productBrand.textContent = instrument.brand
-    let productFinish = document.createElement('h3')//.textContent = instrument.finish
+    let productFinish = document.createElement('h3')
     productFinish.className = 'product-finish'
     productFinish.textContent = instrument.finish
-    const productPrice = document.createElement('p')//.textContent = instrument.price
+    const productPrice = document.createElement('p')
     productPrice.className = 'product-price'
     productPrice.textContent = instrument.price
     let productTitle = document.createElement('p')
@@ -94,7 +168,7 @@ function buildGuitar(instrument){
     cartForm.append(formDiv, label, el1)
 
     productImageContainer.append(image)
-    productDescription.append(productBrand, productModel, productName, productPrice, productTitle, productFinish, cartForm, addToCartBtn)
+    productDescription.append(productBrand, productModel, productPrice, productTitle, productFinish, cartForm, addToCartBtn)
     ul.append(li)
     li.append(productImageContainer,productDescription)
     
@@ -145,7 +219,6 @@ function getGuitarInfo(guitar){
 }
 
 function addIntoCart(guitar){
-    // debugger
     const row = document.createElement('tr');
     row.innerHTML= ` 
     <tr>
@@ -154,74 +227,68 @@ function addIntoCart(guitar){
     </td>
     <td> ${guitar.instrument.brand} ${guitar.instrument.model} </td>
     <td> ${guitar.instrument.price} </td>
-    <td> <a href ="#" class="remove" data-id="${guitar.instrument.id}">X</a></td>
+    <td> <a href ="#" class="remove" data-id="${guitar.id}">X</a></td>
     </tr>
     `;
     shoppingCartContent.appendChild(row);
 
-    // saveIntoStorage(guitar);
-
-    shoppingCartContent.addEventListener('click', removeGuitar)
+    shoppingCartContent.addEventListener('click', e => {
+        removeGuitar(guitar, e)
+    })
+    saveIntoStorage(guitar);
 }
 
-function removeGuitar(guitar){
-    guitar.target.parentElement.parentElement.remove()
+function removeGuitar(guitar, e){
+    return fetch(`${LINE_ITEMS}/${parseInt(e.target.dataset.id)}`, {
+        method: 'DELETE'
+    })
+    .then(res => res.json())
+    .then(data => {
+        e.target.parentElement.parentElement.remove()
+    })
+    .then(removeFromLocalStorage())
+    .catch((error) => {
+        console.error['Error:', error];
+    })
 }
 
-addPhoto.addEventListener('click', addPhotoToSell)
+addPhoto.addEventListener('click', () => buildCreateForm())
 
 function addPhotoToSell() {
     console.log('it registered')
     contentContainer.innerHTML = ''
 
-    //let condArr = ['New', 'Excellent', 'Fair', 'Good' 'Used']
+    let formItems = ['Title', 'Description', 'Brand', 'Model', 'Condition', 'Finish', 'Price', 'Image' ]
+
     let photoForm = document.createElement('form')
-    // let photoDiv = document.createElement('div')
-    // let photoLabel = document.createElement('label')
-    let titleEl = document.createElement('input')
-    let brandEl = document.createElement('input')
-    let modelEl = document.createElement('input')
-    let descriptionEl = document.createElement('input')
-    let conditionEl = document.createElement('input')
-    let finishEl = document.createElement('input')
-    let priceEl = document.createElement('input')
-    let imageEl = document.createElement('input')
-    let addPhotoBtn = document.createElement('button')
+    let h3 = document.createElement('h3')
+    let img = document.createElement('img')
+    let p = document.createElement('p')
+    let div = document.createElement('div')
+    let submit = document.createElement('input')
 
-    //[...select.condArr].filter(option => option.selected).map(option => option.value)
+    submit.type = 'submit'
 
-    photoForm.setAttribute('id', 'photoForm')
+    formItems.forEach(item => {
+        let label = document.createElement('label')
+        let input = document.createElement('input')
+        label.for = item 
+        label.textContent = item.toUpperCase()
+        input.type = 'text'
+        input.name = item 
+
+        photoForm.appendChild(label)
+        photoForm.appendChild(input)
+    })
+
+    photoForm.appendChild(submit)
+    contentContainer.appendChild(h3, img, p, div)
     contentContainer.appendChild(photoForm)
-
-    titleEl.setAttribute('type', 'text')
-    titleEl.setAttribute('value', 'title')
-    titleEl.className = 'add-photo-title'
-    brandEl.setAttribute('type', 'text')
-    brandEl.setAttribute('value', 'brand')
-    brandEl.className = 'add-photo-brand'
-    modelEl.setAttribute('type', 'text')
-    modelEl.setAttribute('value', 'model')
-    modelEl.className = 'add-photo-model'
-    descriptionEl.setAttribute('type', 'text')
-    descriptionEl.setAttribute('value', 'description')
-    descriptionEl.className = 'add-photo-description'
-    conditionEl.setAttribute('type', 'text')
-    conditionEl.setAttribute('value', 'condition')
-    conditionEl.className = 'add-photo-condition'
-    finishEl.setAttribute('type', 'text')
-    finishEl.setAttribute('value', 'finish')
-    finishEl.className = 'add-photo-finish'
-    priceEl.setAttribute('type', 'text')
-    priceEl.setAttribute('value', 'price')
-    priceEl.className = 'add-photo-price'
-    imageEl.setAttribute('type', 'text')
-    imageEl.setAttribute('value', 'image url')
-    imageEl.className = 'add-photo-image'
-    contentContainer.append(titleEl, brandEl, modelEl, descriptionEl, conditionEl, finishEl, priceEl, imageEl, addPhotoBtn)
-
-    titleEl.addEventListener
-
 }
+
+
+    //let condArr = ['New', 'Excellent', 'Fair', 'Good' 'Used']
+
 
 clearCartBtn.addEventListener('click', clearCart)
 
@@ -230,46 +297,35 @@ function clearCart(e){
 }
 
 function saveIntoStorage(guitar){
-
-    let guitars= getGuitarsFromStorage();
+    // debugger
+    let guitars= []
     
     guitars.push(guitar);
     
     localStorage.setItem('guitars', JSON.stringify(guitars));
     }
     
-    function getGuitarsFromStorage(){
-        let guitars; 
-    
-        if(localStorage.getItem('guitars')===null){
-            guitars=[];
-        } else{
-            guitar= JSON.parse(localStorage.getItem('guitars'));
-        
-        }
-        return guitars;
-    }
-    
-    function getFromLocalStorage(){
-        let guitarsLS= getCoursesFromStorage(); 
-    
-    
-        guitarsLS.forEach(function(guitar) {
-    
-    
-            const row= document.createElement('tr');
-            row.innerHTML= ` 
-            <tr>
-            <td>
-            <img src="${guitar.instrument.image}" width=100>
-            </td>
-            <td> ${guitar.instrument.brand} ${guitar.instrument.model} </td>
-            <td> ${guitar.instrument.price} </td>
-            <td> <a href ="#" class="remove" data-id="${guitar.instrument.id}">X</a></td>
-            </tr>
-        `;
-            shoppingCartContent.appendChild(row);
-         }); 
+function getGuitarsFromStorage(){
+    let guitars; 
+
+    if(localStorage.getItem('guitars')===null){
+        guitars=[];
+    } else{
+        guitars= JSON.parse(localStorage.getItem('guitars'));
     
     }
+    return guitars;
+}
+    
+function getFromLocalStorage(){
+    let guitarsLS = getGuitarsFromStorage(); 
+
+    guitarsLS.forEach(function(guitar) {
+        addIntoCart(guitar)
+        });
+}
+
+function removeFromLocalStorage(){
+    localStorage.removeItem('guitars');
+}
 

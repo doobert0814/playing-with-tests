@@ -218,6 +218,16 @@ form input.qty {
 	margin-left: 0.4em;
 }
 
+form #input-text {
+	width: 40px;
+	border: 1px solid #eee;
+	font: 1em 'PT Serif', serif;
+	background: #f9f9f9;
+	color: #000;
+	border-radius: 3px;
+	margin-left: 0.4em;
+}
+
 .btn, a.btn {
 	display: inline-block;
 	background: #cc1400;
