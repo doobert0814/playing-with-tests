@@ -1,4 +1,4 @@
-// http://localhost:3000/instruments
+// http://localhost:3000/line_items/84
 
 document.addEventListener('DOMContentLoaded', getFromLocalStorage);
 
@@ -19,16 +19,6 @@ const productContainer = document.getElementById('products')
 const footerContainer = document.getElementById('site-info')
 
 getGuitars(INSTRUMENT_URL)
-
-function toggleMenu(x) {
-    x.classList.toggle("change");
-    let y = document.getElementById('panel')
-    if (y.style.display === 'block'){
-        y.style.display = 'none';
-    } else {
-        y.style.display = 'block';
-    }
-}
 
 cart.addEventListener("click", () => {
     showCart = !showCart;
@@ -71,13 +61,12 @@ function handleSubmit(e, value){
 }
 
 function makePost(instrument){
-    debugger
+
     fetch(INSTRUMENT_URL,{
         method: 'POST',
         headers: {
             'Content-Type':'application/json'
         },
-        // body: JSON.stringify(instrument)
         body: JSON.stringify({
             title: instrument.Title,
             brand: instrument.Brand,
@@ -91,33 +80,33 @@ function makePost(instrument){
     .then(res => res.json())
     .then(instrument => {
         console.log(instrument)
-       getGuitars(url)
+       sellPage()
     })
     .catch(error => {
         console.error('Errors: ', error)
     })
 }
 
-function makePatch(instrument, e){
+function makePatch(guitar){
     debugger
-
-    fetch(`${INSTRUMENT_URL}/${parseInt(e.target.dataset.id)}`, {
+    return fetch(`${LINE_ITEMS}/${guitar.id}`, {
         method:'PATCH',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(instrument)
-    })
-    .then(res => res.json())
-    .then(guitar => {
-        sellPage()
-    .then(() => {
-        buildGuitar(instrument)
-    }) 
-    })
-    .catch(error => {
-        console.error('Errors: ', error)
-    })
+        body: JSON.stringify({
+            quantity: guitar.quantity
+        })
+        })
+        .then(res => res.json())
+        .then(data => {
+            // addIntoCart(data)
+            updateCart(data)
+        })
+        
+        .catch(error => {
+            console.error('Errors: ', error)
+        })
 }
 
 function buildGuitar(instrument){
@@ -193,6 +182,7 @@ function buyGuitar(e){
     })
     .then(res => res.json())
     .then(item => {
+        // console.log(item)
         addIntoCart(item)
     })    
 }
@@ -206,19 +196,92 @@ function sellPage(){
     getGuitars(INSTRUMENT_URL)
 }
 
-function getGuitarInfo(guitar){
-    const guitarInfo={
+function cartTotal(){
 
-        image: guitar.querySelector('img').src,
-        title: guitar.querySelector('h3').textContent,
-        price: guitar.querySelector('product-price').textContent,
-        id: guitar.querySelector('li').getAttribute('li.id')
+}
 
-    }
-    addIntoCart(guitarInfo);
+function plusOneQuantity(guitar,e){
+    // debugger
+    const quantity = parseInt(e.target.parentElement.parentElement.querySelectorAll('td')[5].innerText.split('')[10]) +1
+    guitar.quantity = quantity
+    console.log(guitar)
+    makePatch(guitar)
+}
+
+// function minOneQuantity(guitar, e){
+//     debugger
+//     const quantity = parseInt(e.target.parentElement.parentElement.querySelectorAll('td')[5].innerText.split('')[10]) -1
+//     guitar.quantity = quantity
+//     console.log(guitar)
+//     if (guitar.quantity == 0) {
+//         debugger
+//         removeGuitar(guitar, e)
+//     }else{
+//     makePatch(guitar)
+// }}
+
+function seperateArr(data){
+    debugger
+
+}
+
+
+
+function updateCart(data){
+    debugger
+    shoppingCartContent.innerHTML= ''
+    data.forEach(data => {
+        
+    
+    const row1 = document.createElement('tr')
+    row1.innerHTML = `
+    <tr>
+    <td>
+    <img src="${data.instrument.image}" width=100>
+    </td>
+    <td> ${data.instrument.brand} ${data.instrument.model} </td>
+    <td> <button id="remove" class="remove" data-id="${data.id}" type="button">X</td>
+    <td> <button id="minus-update-cart" type="button">-</td>
+    <td> <button id="plus-update-cart" type="button">+</td>
+    <td> quantity: ${data.quantity} </td>
+    <td> total: ${data.instrument.price}</td>
+    </tr>
+    `;   
+    
+    shoppingCartContent.append(row1);
+
+    saveIntoStorage(data);
+    })
+}
+
+function showAllCart(data){
+    data.forEach(data => {
+        
+    
+        const row1 = document.createElement('tr')
+        row1.innerHTML = `
+        <tr>
+        <td>
+        <img src="${data.instrument.image}" width=100>
+        </td>
+        <td> ${data.instrument.brand} ${data.instrument.model} </td>
+        <td> <button id="remove" class="remove" data-id="${data.id}" type="button">X</td>
+        <td> <button id="minus-update-cart" type="button">-</td>
+        <td> <button id="plus-update-cart" type="button">+</td>
+        <td> quantity: ${data.quantity} </td>
+        <td> total: ${data.instrument.price}</td>
+        </tr>
+        `;   
+        
+        shoppingCartContent.append(row1);
+    
+        saveIntoStorage(data);
+        })
+
 }
 
 function addIntoCart(guitar){
+    debugger
     const row = document.createElement('tr');
     row.innerHTML= ` 
     <tr>
@@ -226,19 +289,37 @@ function addIntoCart(guitar){
     <img src="${guitar.instrument.image}" width=100>
     </td>
     <td> ${guitar.instrument.brand} ${guitar.instrument.model} </td>
-    <td> ${guitar.instrument.price} </td>
-    <td> <a href ="#" class="remove" data-id="${guitar.id}">X</a></td>
+    <td> <button id="remove" class="remove" data-id="${guitar.id}" type="button">X</td>
+    <td> <button id="minus-update-cart" type="button">-</td>
+    <td> <button id="plus-update-cart" type="button">+</td>
+    <td> quantity: ${guitar.quantity} </td>
+    <td> total: $ ${guitar.instrument.price}</td>
     </tr>
     `;
     shoppingCartContent.appendChild(row);
 
-    shoppingCartContent.addEventListener('click', e => {
+    let plusUpdate = document.getElementById('plus-update-cart')
+
+    // let minUpdate = document.getElementById('minus-update-cart')
+
+    let removeBtn = document.getElementById('remove')
+
+    // minUpdate.addEventListener('click', e => {
+    //     minOneQuantity(guitar, e)
+    // })
+
+    plusUpdate.addEventListener('click', e => {
+        plusOneQuantity(guitar, e)
+    })
+
+    removeBtn.addEventListener('click', e => {
         removeGuitar(guitar, e)
     })
     saveIntoStorage(guitar);
 }
 
 function removeGuitar(guitar, e){
+    debugger
     return fetch(`${LINE_ITEMS}/${parseInt(e.target.dataset.id)}`, {
         method: 'DELETE'
     })
@@ -246,10 +327,14 @@ function removeGuitar(guitar, e){
     .then(data => {
         e.target.parentElement.parentElement.remove()
     })
+    .then(data => {
+        updateCart(data)
+    })
     .then(removeFromLocalStorage())
     .catch((error) => {
         console.error['Error:', error];
     })
+    
 }
 
 addPhoto.addEventListener('click', () => buildCreateForm())
@@ -292,12 +377,12 @@ function addPhotoToSell() {
 
 clearCartBtn.addEventListener('click', clearCart)
 
+
 function clearCart(e){
-    shoppingCartContent.innerHTML = ''
+    e.target.parentElement.remove()
 }
 
 function saveIntoStorage(guitar){
-    // debugger
     let guitars= []
     
     guitars.push(guitar);
